@@ -381,6 +381,13 @@ async def inline_chosen(_, result):
     log.info("Started inline countdown %s", cd.id)
 
 
+# Set LOG_UPDATES=1 in .env to see every update Telegram sends (for debugging).
+if os.environ.get("LOG_UPDATES"):
+    @bot.on_raw_update(group=-1)
+    async def log_update(_, update, users, chats):
+        log.info("Update: %s", type(update).__name__)
+
+
 # ---------- startup ----------
 
 async def setup_profile():
