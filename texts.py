@@ -183,6 +183,14 @@ TEXTS = {
 }
 
 
+RLM = "\u200f"  # invisible right-to-left mark
+
+
 def t(lang, key, **values):
     text = TEXTS.get(lang, TEXTS["en"])[key]
-    return text.format(**values) if values else text
+    text = text.format(**values) if values else text
+    if lang == "ar":
+        # Telegram decides each line's direction from its first letter, so a line that
+        # starts with an emoji or @username can jump to the left. This keeps it right.
+        text = "\n".join(RLM + line if line else line for line in text.split("\n"))
+    return text

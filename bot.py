@@ -393,7 +393,7 @@ if os.environ.get("LOG_UPDATES"):
 async def setup_profile():
     """Command menus and the 'What can this bot do?' text, in both languages."""
     for lang in LANGS:
-        code = "" if lang == "en" else lang
+        code = "" if lang == "ar" else lang  # Arabic for everyone, English for English apps
         private = [BotCommand(c, t(lang, f"cmd_{c}")) for c in ("start", "help", "lang", "stop")]
         groups = [BotCommand(c, t(lang, f"cmd_{c}")) for c in ("set", "stop", "help", "lang")]
         await bot.set_bot_commands(private, scope=BotCommandScopeAllPrivateChats(), language_code=code)
