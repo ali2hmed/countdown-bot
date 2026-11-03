@@ -22,8 +22,7 @@ TEXTS = {
             "Or use me in <b>any chat</b> by typing:\n"
             "<code>@{bot} 31/12 Party 🎉</code>\n\n"
             "In groups, admins can use /set.\n\n"
-            "📣 News: @{channel}\n"
-            "👨‍💻 Developer: @{developer}"
+            "📣 News: @{channel}"
         ),
         "help": (
             "ℹ️ <b>Help</b>\n\n"
@@ -78,12 +77,35 @@ TEXTS = {
         "btn_help": "❓ Help",
         "btn_lang": "🌐 Language",
         "btn_channel": "📣 Channel",
-        "btn_dev": "👨‍💻 Developer",
         "btn_back": "⬅️ Back",
         "btn_stop": "⏹ Stop",
         "cmd_start": "Main menu",
         "cmd_help": "How to use countdowns",
         "cmd_lang": "Change your language",
+        "must_join": (
+            "📣 <b>Join our channel first</b>\n\n"
+            "To use this bot, please join @{channel}, then tap <b>✅ I joined</b>."
+        ),
+        "btn_join": "📣 Join the channel",
+        "btn_joined": "✅ I joined",
+        "not_joined": "You haven't joined @{channel} yet.",
+        "joined_ok": "✅ Thanks for joining!",
+        "inline_join": "📣 Join @{channel} to use the bot",
+        "cmd_stats": "Bot stats (only you see this)",
+        "stats": (
+            "📊 <b>{bot} stats</b>\n\n"
+            "👥 Users: <b>{users:,}</b> (+{new_day:,} today · +{new_week:,} this week)\n"
+            "🔥 Active: <b>{active_day:,}</b> today · <b>{active_week:,}</b> this week\n"
+            "🌐 Arabic {ar:,} · English {en:,}\n"
+            "💬 Groups {groups:,} · Channels {channels:,}\n\n"
+            "{activity}\n\n"
+            "<i>Counting since {since}. \"Today\" means the last 24 hours.</i>"
+        ),
+        "stats_activity": (
+            "⏳ Countdowns: <b>{total:,}</b> (+{day:,} today · +{week:,} this week)\n"
+            "In chats {chat:,} · Inline {inline:,}\n"
+            "▶️ Running now: <b>{running:,}</b>"
+        ),
         "cmd_set": "Start a countdown",
         "cmd_stop": "Stop countdowns in this chat",
         "bot_about": "Live countdowns to your events, in any chat. By @{channel}",
@@ -91,8 +113,7 @@ TEXTS = {
             "⏳ Live countdowns for your important events.\n\n"
             "Send a date and a message, and I'll keep the countdown ticking right in your chat, "
             "group or channel.\n\n"
-            "📣 News: @{channel}\n"
-            "👨‍💻 Developer: @{developer}"
+            "📣 News: @{channel}"
         ),
     },
     "ar": {
@@ -107,8 +128,7 @@ TEXTS = {
             "أو استخدمني في <b>أي محادثة</b> بكتابة:\n"
             "<code>@{bot} 31/12 حفلة 🎉</code>\n\n"
             "وفي المجموعات يستطيع المشرفون استخدام /set\n\n"
-            "📣 الأخبار: @{channel}\n"
-            "👨‍💻 المطوّر: @{developer}"
+            "📣 الأخبار: @{channel}"
         ),
         "help": (
             "ℹ️ <b>المساعدة</b>\n\n"
@@ -164,20 +184,42 @@ TEXTS = {
         "btn_help": "❓ المساعدة",
         "btn_lang": "🌐 اللغة",
         "btn_channel": "📣 القناة",
-        "btn_dev": "👨‍💻 المطوّر",
         "btn_back": "⬅️ رجوع",
         "btn_stop": "⏹ إيقاف",
         "cmd_start": "القائمة الرئيسية",
         "cmd_help": "طريقة استخدام العدّاد",
         "cmd_lang": "تغيير اللغة",
+        "must_join": (
+            "📣 <b>اشترك بالقناة أولاً</b>\n\n"
+            "حتى تستخدم البوت، اشترك في @{channel} ثم اضغط <b>✅ اشتركت</b>."
+        ),
+        "btn_join": "📣 اشترك بالقناة",
+        "btn_joined": "✅ اشتركت",
+        "not_joined": "لم تشترك في @{channel} بعد.",
+        "joined_ok": "✅ شكراً لاشتراكك!",
+        "inline_join": "📣 اشترك في @{channel} لاستخدام البوت",
+        "cmd_stats": "إحصائيات البوت (تظهر لك فقط)",
+        "stats": (
+            "📊 <b>إحصائيات {bot}</b>\n\n"
+            "👥 المستخدمون: <b>{users:,}</b> (+{new_day:,} اليوم · +{new_week:,} هذا الأسبوع)\n"
+            "🔥 النشطون: <b>{active_day:,}</b> اليوم · <b>{active_week:,}</b> هذا الأسبوع\n"
+            "🌐 العربية {ar:,} · الإنجليزية {en:,}\n"
+            "💬 المجموعات {groups:,} · القنوات {channels:,}\n\n"
+            "{activity}\n\n"
+            "<i>العدّ بدأ في {since}. \"اليوم\" يعني آخر 24 ساعة.</i>"
+        ),
+        "stats_activity": (
+            "⏳ العدادات: <b>{total:,}</b> (+{day:,} اليوم · +{week:,} هذا الأسبوع)\n"
+            "بالمحادثات {chat:,} · بالإنلاين {inline:,}\n"
+            "▶️ تعمل الآن: <b>{running:,}</b>"
+        ),
         "cmd_set": "ابدأ عدّاً تنازلياً",
         "cmd_stop": "أوقف العدّادات في هذه المحادثة",
         "bot_about": "عدّ تنازلي حيّ لمناسباتك في أي محادثة. من @{channel}",
         "bot_description": (
             "⏳ عدّ تنازلي حيّ لمناسباتك المهمة.\n\n"
             "أرسل تاريخاً ورسالة، وسأبقي العدّاد يتحدّث داخل محادثتك أو مجموعتك أو قناتك.\n\n"
-            "📣 الأخبار: @{channel}\n"
-            "👨‍💻 المطوّر: @{developer}"
+            "📣 الأخبار: @{channel}"
         ),
     },
 }

@@ -9,12 +9,13 @@ from zoneinfo import ZoneInfo
 
 from pyrogram import Client, filters, idle
 from pyrogram.enums import ChatMemberStatus, ChatType, ParseMode
-from pyrogram.errors import FloodWait, MessageNotModified, RPCError
+from pyrogram.errors import FloodWait, MessageNotModified, RPCError, UserNotParticipant
 from pyrogram.raw.functions.bots import SetBotInfo
 from pyrogram.types import (
     BotCommand,
     BotCommandScopeAllGroupChats,
     BotCommandScopeAllPrivateChats,
+    BotCommandScopeChat,
     InlineKeyboardButton,
     InlineKeyboardMarkup,
     InlineQueryResultArticle,
@@ -29,7 +30,9 @@ from db import DB, Countdown
 from texts import CHOOSE_LANG, LANGS, t
 
 CHANNEL = "aliahmedbots"
-DEVELOPER = "ali2hmed"
+OWNER_ID = int(os.environ.get("OWNER_ID") or 0)  # your Telegram id: only you can use /stats
+# People must join this channel to use the bot (the bot must be an admin there). Empty turns it off.
+MUST_JOIN = os.environ.get("MUST_JOIN", CHANNEL).lstrip("@")
 MAX_ACTIVE = 10  # running countdowns per person
 TZ = ZoneInfo(os.environ.get("TIMEZONE", "Asia/Baghdad"))
 FOOTER = os.environ.get("FOOTER_MESSAGE", "")
@@ -67,7 +70,7 @@ def tz_name():
 
 def welcome_text(lang, user):
     return t(lang, "welcome", name=html.escape(user.first_name or ""),
-             bot=bot.me.username, channel=CHANNEL, developer=DEVELOPER)
+             bot=bot.me.username, channel=CHANNEL)
 
 
 def help_text(lang):
@@ -80,8 +83,7 @@ def main_menu(lang):
         [InlineKeyboardButton(t(lang, "btn_group"), url=f"https://t.me/{bot.me.username}?startgroup=true")],
         [InlineKeyboardButton(t(lang, "btn_help"), callback_data="help"),
          InlineKeyboardButton(t(lang, "btn_lang"), callback_data="lang")],
-        [InlineKeyboardButton(t(lang, "btn_channel"), url=f"https://t.me/{CHANNEL}"),
-         InlineKeyboardButton(t(lang, "btn_dev"), url=f"https://t.me/{DEVELOPER}")],
+        [InlineKeyboardButton(t(lang, "btn_channel"), url=f"https://t.me/{CHANNEL}")],
     ])
 
 
@@ -132,8 +134,10 @@ def render(cd, now):
 
 
 def register(cd):
+    """Start keeping a new countdown up to date."""
     active[cd.id] = cd
     db.add(cd)
+    db.add_event(cd.owner_id, "inline" if cd.inline_id else "chat")
 
 
 def unregister(cd):
@@ -231,6 +235,101 @@ async def start_countdown(message, text, lang):
     log.info("Started countdown %s in chat %s", cd.id, cd.chat_id)
 
 
+# ---------- who uses the bot (for /stats) ----------
+
+def track(user, chat):
+    if user and not user.is_bot:
+        db.seen_user(user.id)
+    if chat and chat.type in (ChatType.GROUP, ChatType.SUPERGROUP, ChatType.CHANNEL):
+        db.seen_chat(chat.id, chat.type.name.lower(), chat.title)
+
+
+# group=-1 runs before the other handlers and doesn't stop them.
+@bot.on_message(group=-1)
+async def track_message(_, message):
+    track(message.from_user, message.chat)
+
+
+@bot.on_callback_query(group=-1)
+async def track_button(_, query):
+    track(query.from_user, query.message.chat if query.message else None)
+
+
+@bot.on_inline_query(group=-1)
+async def track_inline(_, query):
+    track(query.from_user, None)
+
+
+def stats_text(lang):
+    s = db.stats()
+    events = s.pop("events")
+    total, day, week = (sum(v[i] for v in events.values()) for i in range(3))
+    activity = t(lang, "stats_activity", total=total, day=day, week=week, running=len(active),
+                 chat=events.get("chat", (0,))[0], inline=events.get("inline", (0,))[0])
+    since = datetime.fromtimestamp(s.pop("since"), TZ).strftime("%Y/%m/%d")
+    return t(lang, "stats", bot=f"@{bot.me.username}", activity=activity, since=since, **s)
+
+
+# ---------- people must join the channel ----------
+
+MEMBER_CACHE = 600  # seconds to trust a "yes, they joined" before asking Telegram again
+members: dict[int, float] = {}  # user id -> when we last saw them in the channel
+
+
+async def has_joined(user):
+    """True if `user` is in MUST_JOIN. Needs the bot to be an admin in that channel."""
+    if not MUST_JOIN or user is None or user.id == OWNER_ID:
+        return True
+    if time.time() - members.get(user.id, 0) < MEMBER_CACHE:
+        return True
+    try:
+        member = await bot.get_chat_member(MUST_JOIN, user.id)
+    except UserNotParticipant:
+        return False
+    except RPCError as e:
+        # Most likely the bot isn't an admin in the channel yet. Don't lock everyone out.
+        log.warning("Couldn't check if %s joined @%s (is the bot an admin there?): %s", user.id, MUST_JOIN, e)
+        return True
+    if member.status in (ChatMemberStatus.LEFT, ChatMemberStatus.BANNED):
+        return False
+    if member.status == ChatMemberStatus.RESTRICTED and not member.is_member:
+        return False
+    members[user.id] = time.time()
+    return True
+
+
+def join_menu(lang):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(t(lang, "btn_join"), url=f"https://t.me/{MUST_JOIN}")],
+        [InlineKeyboardButton(t(lang, "btn_joined"), callback_data="joined")],
+    ])
+
+
+async def ask_to_join(message, lang):
+    await message.reply(t(lang, "must_join", channel=MUST_JOIN), reply_markup=join_menu(lang),
+                        link_preview_options=NO_PREVIEW)
+
+
+async def joined_button(query, lang):
+    """The "I joined" button: check again, then carry on with what they asked for."""
+    if not await has_joined(query.from_user):
+        return await query.answer(t(lang, "not_joined", channel=MUST_JOIN), show_alert=True)
+    await query.answer(t(lang, "joined_ok"))
+    prompt = query.message
+    original = None
+    if prompt and prompt.reply_to_message_id:
+        try:
+            original = await bot.get_messages(prompt.chat.id, prompt.reply_to_message_id)
+        except RPCError:
+            pass
+    try:
+        await prompt.delete()
+    except RPCError:
+        pass
+    if original and not original.empty and original.from_user and original.from_user.id == query.from_user.id:
+        await resume(original)
+
+
 # ---------- commands ----------
 
 @bot.on_message(filters.command("start") & filters.private)
@@ -238,6 +337,8 @@ async def start_cmd(_, message):
     lang = user_lang(message.from_user)
     if len(message.command) > 1 and message.command[1] == "help":
         return await message.reply(help_text(lang), reply_markup=back_menu(lang), link_preview_options=NO_PREVIEW)
+    if len(message.command) > 1 and message.command[1] == "join":  # from the inline "Join" button
+        return await ask_to_join(message, lang)
     if db.get_lang(message.from_user.id) is None:
         return await message.reply(CHOOSE_LANG, reply_markup=lang_menu())
     await message.reply(welcome_text(lang, message.from_user), reply_markup=main_menu(lang),
@@ -256,6 +357,11 @@ async def lang_cmd(_, message):
     await message.reply(CHOOSE_LANG, reply_markup=lang_menu())
 
 
+@bot.on_message(filters.command("stats") & filters.user(OWNER_ID))
+async def stats_cmd(_, message):
+    await message.reply(stats_text(user_lang(message.from_user)))
+
+
 @bot.on_message(filters.command("set"))
 async def set_cmd(_, message):
     lang = user_lang(message.from_user)
@@ -264,6 +370,8 @@ async def set_cmd(_, message):
         return await message.reply(t(lang, "set_usage"))
     if not await can_manage(message):
         return await message.reply(t(lang, "admins_only"))
+    if not await has_joined(message.from_user):
+        return await ask_to_join(message, lang)
     await start_countdown(message, args[1], lang)
 
 
@@ -281,7 +389,18 @@ async def stop_cmd(_, message):
 # In private chat, any plain text is treated as a new countdown.
 @bot.on_message(filters.private & filters.text & ~filters.via_bot & ~filters.regex(r"^/"))
 async def private_text(_, message):
-    await start_countdown(message, message.text, user_lang(message.from_user))
+    lang = user_lang(message.from_user)
+    if not await has_joined(message.from_user):
+        return await ask_to_join(message, lang)
+    await start_countdown(message, message.text, lang)
+
+
+async def resume(message):
+    """Run a message again after its sender joined the channel."""
+    if (message.text or "").startswith("/"):
+        await set_cmd(bot, message)
+    else:
+        await private_text(bot, message)
 
 
 # ---------- buttons ----------
@@ -290,6 +409,8 @@ async def private_text(_, message):
 async def buttons(_, query):
     data = query.data or ""
     lang = user_lang(query.from_user)
+    if data == "joined":
+        return await joined_button(query, lang)
 
     if data.startswith("stop:"):
         cd = active.get(data.split(":", 1)[1])
@@ -338,6 +459,9 @@ async def inline_query(_, query):
     if not query.query.strip():
         return await query.answer([], cache_time=0, is_personal=True,
                                   switch_pm_text=t(lang, "inline_how"), switch_pm_parameter="help")
+    if not await has_joined(query.from_user):
+        return await query.answer([], cache_time=0, is_personal=True,
+                                  switch_pm_text=t(lang, "inline_join", channel=MUST_JOIN), switch_pm_parameter="join")
     now = datetime.now(TZ)
     try:
         end, title = countdown.parse(query.query, now)
@@ -398,10 +522,16 @@ async def setup_profile():
         groups = [BotCommand(c, t(lang, f"cmd_{c}")) for c in ("set", "stop", "help", "lang")]
         await bot.set_bot_commands(private, scope=BotCommandScopeAllPrivateChats(), language_code=code)
         await bot.set_bot_commands(groups, scope=BotCommandScopeAllGroupChats(), language_code=code)
+        if OWNER_ID:
+            try:  # your own menu also shows /stats
+                await bot.set_bot_commands(private + [BotCommand("stats", t(lang, "cmd_stats"))],
+                                           scope=BotCommandScopeChat(OWNER_ID), language_code=code)
+            except RPCError as e:
+                log.warning("Couldn't set your /stats menu (send /start to the bot first): %s", e)
         await bot.invoke(SetBotInfo(
             lang_code=code,
             about=t(lang, "bot_about", channel=CHANNEL),
-            description=t(lang, "bot_description", channel=CHANNEL, developer=DEVELOPER),
+            description=t(lang, "bot_description", channel=CHANNEL),
         ))
 
 
