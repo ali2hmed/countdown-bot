@@ -1,1 +1,1 @@
-kurigram
+kurigram==2.2.26  # 2.2.27 removed Client.loop
