@@ -26,6 +26,7 @@ from pyrogram.types import (
 
 import countdown
 from countdown import ParseError
+import comeback
 from db import DB, Countdown
 from texts import CHOOSE_LANG, LANGS, t
 
@@ -546,7 +547,9 @@ async def main():
         log.warning("Couldn't set up the bot profile: %s", e)
     task = asyncio.create_task(ticker())
     log.info("@%s is running with %d countdown(s)", bot.me.username, len(active))
+    watcher = asyncio.create_task(comeback.watch(bot, db, lambda lang: t(lang or "ar", "back_online")))
     await idle()
+    watcher.cancel()
     task.cancel()
     await bot.stop()
 

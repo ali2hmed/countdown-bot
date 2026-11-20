@@ -11,6 +11,7 @@ CHOOSE_LANG = "🌐 <b>Please choose your language</b>\n🌐 <b>الرجاء ا�
 
 TEXTS = {
     "en": {
+        "back_online": "✅ <b>I'm back online!</b>\nSorry for the break. Everything works again, send me what you need 🙏",
         "welcome": (
             "👋 Hey <b>{name}</b>!\n\n"
             "I'm a <b>countdown bot</b> ⏳\n"
@@ -117,6 +118,7 @@ TEXTS = {
         ),
     },
     "ar": {
+        "back_online": "✅ <b>البوت رجع يشتغل!</b>\nنعتذر عن الانقطاع. كل شي يشتغل الآن، أرسل اللي تحتاجه 🙏",
         "welcome": (
             "👋 أهلاً <b>{name}</b>!\n\n"
             "أنا <b>بوت العد التنازلي</b> ⏳\n"
