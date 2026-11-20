@@ -19,7 +19,11 @@ python3 -m venv .venv
 
 Messages are in `texts.py`.
 
-Made by [@ali2hmed](https://t.me/ali2hmed) · [@aliahmedbots](https://t.me/aliahmedbots)
+### Where Telegram is blocked
+
+The bot connects through Cloudflare WARP. Start it once with `docker compose -f warp/docker-compose.yml up -d`, and keep `PROXY=socks5://warp:1080` in `.env`. Then run the bot with `docker compose up -d --build`.
+
+Made by [@aliahmedbots](https://t.me/aliahmedbots)
 
 ## Credits
 - [Countdown Timer Telegram bot by TeLe TiPs](https://github.com/teletips/CountdownTimer-TeLeTiPs)
